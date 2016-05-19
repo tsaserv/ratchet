@@ -11,79 +11,72 @@ import (
 
 // SftpWriter is an inline writer to remote sftp server
 type SftpWriter struct {
-	ftpFilepath string
-	client      *sftp.Client
-	file        *sftp.File
-	params      *parameters
-	initialized bool
-}
-
-type parameters struct {
-	server   string
-	username string
-	password string
-	path     string
+	client        *sftp.Client
+	file          *sftp.File
+	parameters    *util.SftpParameters
+	initialized   bool
+	CloseOnFinish bool
 }
 
 // NewSftpWriter instantiates a new sftp writer, a connection to the remote server is delayed until data is recv'd by the writer
-func NewSftpWriter(server, username, password, path string) *SftpWriter {
-	return &SftpWriter{params: &parameters{server, username, password, path}, initialized: false}
-}
-
-// init calls connect and then creates the output file on the sftp server specified at the path specified
-func (w *SftpWriter) init(killChan chan error) {
-	c := connect(w.params.server, w.params.username, w.params.password, killChan)
-
-	f, e := c.Create(w.params.path)
-	if e != nil {
-		util.KillPipelineIfErr(e, killChan)
-	}
-	w.client = c
-	w.file = f
-	w.initialized = true
-}
-
-// connect opens an ssh connection and instantiates an sftp client based on that connection
-func connect(server, username, password string, killChan chan error) *sftp.Client {
-	// open ssh connection
-	config := &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
+// By default, the connection to the remote client will be closed in the Finish() func.
+// Set CloseOnFinish to false to manage the connection manually.
+func NewSftpWriter(server string, username string, path string, authMethods ...ssh.AuthMethod) *SftpWriter {
+	return &SftpWriter{
+		parameters: &util.SftpParameters{
+			Server:      server,
+			Username:    username,
+			Path:        path,
+			AuthMethods: authMethods,
 		},
+		initialized:   false,
+		CloseOnFinish: true,
 	}
-	c, e := ssh.Dial("tcp", server, config)
-	if e != nil {
-		util.KillPipelineIfErr(e, killChan)
-	}
+}
 
-	// instantiate sftp client
-	sftp, e := sftp.NewClient(c)
-	if e != nil {
-		util.KillPipelineIfErr(e, killChan)
-	}
-
-	return sftp
+// NewSftpWriterByFile allows you to manually manage the connection to the remote file object.
+// Use this if you want to write to the same file object across multiple pipelines.
+// By default, the connection to the remote client will *not* be closed in the Finish() func.
+// Set CloseOnFinish to true to have this processor clean up the connection when it's done.
+func NewSftpWriterByFile(file *sftp.File) *SftpWriter {
+	return &SftpWriter{file: file, initialized: true, CloseOnFinish: false}
 }
 
 // ProcessData writes data as is directly to the output file
 func (w *SftpWriter) ProcessData(d data.JSON, outputChan chan data.JSON, killChan chan error) {
-	logger.Debug("FTPWriter Process data:", string(d))
-	if !w.initialized {
-		w.init(killChan)
-	}
+	logger.Debug("SftpWriter Process data:", string(d))
+	w.ensureInitialized(killChan)
 	_, e := w.file.Write([]byte(d))
-	if e != nil {
-		util.KillPipelineIfErr(e, killChan)
-	}
+	util.KillPipelineIfErr(e, killChan)
 }
 
-// Finish closes open references to the remote file and server
+// Finish optionally closes open references to the remote file and server
 func (w *SftpWriter) Finish(outputChan chan data.JSON, killChan chan error) {
-	w.file.Close()
-	w.client.Close()
+	if w.CloseOnFinish {
+		w.file.Close()
+		w.client.Close()
+	}
 }
 
 func (f *SftpWriter) String() string {
 	return "SftpWriter"
+}
+
+// ensureInitialized calls connect and then creates the output file on the sftp server at the specified path
+func (w *SftpWriter) ensureInitialized(killChan chan error) {
+	if w.initialized {
+		return
+	}
+
+	client, err := util.SftpClient(w.parameters.Server, w.parameters.Username, w.parameters.AuthMethods)
+	util.KillPipelineIfErr(err, killChan)
+
+	logger.Info("Path", w.parameters.Path)
+
+	file, err := client.Create(w.parameters.Path)
+	util.KillPipelineIfErr(err, killChan)
+
+	w.client = client
+	w.file = file
+	w.initialized = true
 }
