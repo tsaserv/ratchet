@@ -76,7 +76,6 @@
 		},
 		{
 			"checksumSHA1": "sgft7A0lRCVD7QBogydg46lr3NM=",
-			"origin": "github.com/dailyburn/ratchet/vendor/github.com/aws/aws-sdk-go/private/endpoints",
 			"path": "github.com/aws/aws-sdk-go/private/endpoints",
 			"revision": "501dd3226ceb6863d89d82e9f7c9f59a43efb008",
 			"revisionTime": "2016-05-18T21:15:13Z"
@@ -119,7 +118,6 @@
 		},
 		{
 			"checksumSHA1": "BA/gv0KordTClvOxXmhBZTnesqo=",
-			"origin": "github.com/dailyburn/ratchet/vendor/github.com/aws/aws-sdk-go/service/s3",
 			"path": "github.com/aws/aws-sdk-go/service/s3",
 			"revision": "501dd3226ceb6863d89d82e9f7c9f59a43efb008",
 			"revisionTime": "2016-05-18T21:15:13Z"
