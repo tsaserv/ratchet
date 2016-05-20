@@ -1,8 +1,15 @@
 package util
 
 import (
+	"compress/gzip"
+	"fmt"
+	"io"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/dailyburn/ratchet/logger"
 )
 
@@ -77,5 +84,37 @@ func DeleteS3Objects(client *s3.S3, bucket string, objKeys []string) (*s3.Delete
 		// MFA:          aws.String("MFA"),
 		// RequestPayer: aws.String("RequestPayer"),
 	}
+
 	return client.DeleteObjects(params)
+}
+
+func WriteS3Object(data []string, config *aws.Config, bucket string, key string, lineSeparator string, compress bool) (string, error) {
+	var reader io.Reader
+
+	byteReader := strings.NewReader(strings.Join(data, lineSeparator))
+
+	if compress {
+		key = fmt.Sprintf("%v.gz", key)
+		pipeReader, pipeWriter := io.Pipe()
+		reader = pipeReader
+
+		go func() {
+			gw := gzip.NewWriter(pipeWriter)
+			io.Copy(gw, byteReader)
+			gw.Close()
+			pipeWriter.Close()
+		}()
+	} else {
+		reader = byteReader
+	}
+
+	uploader := s3manager.NewUploader(session.New(config))
+
+	result, err := uploader.Upload(&s3manager.UploadInput{
+		Body:   reader,
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+
+	return result.Location, err
 }
