@@ -5,6 +5,7 @@ package processors
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/dailyburn/ratchet/data"
 	"github.com/dailyburn/ratchet/logger"
@@ -33,7 +34,7 @@ func NewS3ObjectReader(awsID, awsSecret, awsRegion, bucket, object string) *S3Re
 	creds := credentials.NewStaticCredentials(awsID, awsSecret, "")
 	// .WithLogLevel(aws.LogDebugWithRequestRetries | aws.LogDebugWithRequestErrors)
 	conf := aws.NewConfig().WithRegion(awsRegion).WithDisableSSL(true).WithCredentials(creds)
-	r.client = s3.New(conf)
+	r.client = s3.New(session.New(conf))
 	return &r
 }
 
