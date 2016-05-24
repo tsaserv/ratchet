@@ -123,10 +123,10 @@
 			"revisionTime": "2016-05-18T21:15:13Z"
 		},
 		{
-			"checksumSHA1": "Z1aPQwoV1DHceergID49ib9tGGs=",
+			"checksumSHA1": "x6Yi8NVV3K7zCgY1X5XOlfLW+Rw=",
 			"path": "github.com/dailyburn/bigquery/client",
-			"revision": "85233d8d6d1d83131dcb7f429176b638c153a642",
-			"revisionTime": "2015-11-24T20:59:22Z"
+			"revision": "af320ce74b6e62ad6d284031dedf2f7dfd6784d6",
+			"revisionTime": "2016-05-24T17:37:20Z"
 		},
 		{
 			"checksumSHA1": "gxDxOTjSjdB7CrvViAWL/H6s7Ac=",

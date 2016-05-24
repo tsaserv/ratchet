@@ -202,48 +202,7 @@ func (c *Client) stdPagedQuery(service *bigquery.Service, pageSize int, dataset,
 		return nil, nil, err
 	}
 
-	var headers []string
-	rows := [][]interface{}{}
-
-	// if query is completed process, otherwise begin checking for results
-	if qr.JobComplete {
-		headers, rows = c.headersAndRows(qr.Schema, qr.Rows)
-		if dataChan != nil {
-			dataChan <- Data{Headers: headers, Rows: rows}
-		}
-	}
-
-	if qr.TotalRows > uint64(pageSize) || !qr.JobComplete {
-		resultChan := make(chan [][]interface{})
-		headersChan := make(chan []string)
-
-		go c.pageOverJob(len(rows), qr.JobReference, qr.PageToken, resultChan, headersChan)
-
-	L:
-		for {
-			select {
-			case h, ok := <-headersChan:
-				if ok {
-					headers = h
-				}
-			case newRows, ok := <-resultChan:
-				if !ok {
-					break L
-				}
-				if dataChan != nil {
-					dataChan <- Data{Headers: headers, Rows: newRows}
-				} else {
-					rows = append(rows, newRows...)
-				}
-			}
-		}
-	}
-
-	if dataChan != nil {
-		close(dataChan)
-	}
-
-	return rows, headers, nil
+	return c.processPagedQuery(qr.JobReference, qr.PageToken, dataChan)
 }
 
 // largeDataPagedQuery builds a job and inserts it into the job queue allowing the flexibility to set the custom AllowLargeResults flag for the job
@@ -300,51 +259,10 @@ func (c *Client) largeDataPagedQuery(service *bigquery.Service, pageSize int, da
 		return nil, nil, err
 	}
 
-	var headers []string
-	rows := [][]interface{}{}
-
-	// if query is completed process, otherwise begin checking for results
-	if qr.JobComplete {
-		c.printDebug("job complete, got rows", len(qr.Rows))
-		headers, rows = c.headersAndRows(qr.Schema, qr.Rows)
-		if dataChan != nil {
-			dataChan <- Data{Headers: headers, Rows: rows}
-		}
-	}
-
-	if !qr.JobComplete {
-		resultChan := make(chan [][]interface{})
-		headersChan := make(chan []string)
-
-		go c.pageOverJob(len(rows), runningJob.JobReference, qr.PageToken, resultChan, headersChan)
-
-	L:
-		for {
-			select {
-			case h, ok := <-headersChan:
-				if ok {
-					c.printDebug("got headers")
-					headers = h
-				}
-			case newRows, ok := <-resultChan:
-				if !ok {
-					break L
-				}
-				if dataChan != nil {
-					c.printDebug("got rows", len(newRows))
-					dataChan <- Data{Headers: headers, Rows: newRows}
-				} else {
-					rows = append(rows, newRows...)
-				}
-			}
-		}
-	}
-
-	if dataChan != nil {
-		close(dataChan)
-	}
+	rows, headers, err := c.processPagedQuery(qr.JobReference, qr.PageToken, dataChan)
 	c.printDebug("largeDataPagedQuery completed in ", time.Now().Sub(ts).Seconds(), "s")
-	return rows, headers, nil
+
+	return rows, headers, err
 }
 
 // pagedQuery executes the query using bq's paging mechanism to load all results and sends them back via dataChan if available, otherwise it returns the full result set, headers and error as return values
@@ -363,6 +281,43 @@ func (c *Client) pagedQuery(pageSize int, dataset, project, queryStr string, dat
 	}
 
 	return c.stdPagedQuery(service, pageSize, dataset, project, queryStr, dataChan)
+}
+
+func (c *Client) processPagedQuery(jobRef *bigquery.JobReference, pageToken string, dataChan chan Data) ([][]interface{}, []string, error) {
+	var headers []string
+	rows := [][]interface{}{}
+
+	resultChan := make(chan [][]interface{})
+	headersChan := make(chan []string)
+
+	go c.pageOverJob(0, jobRef, pageToken, resultChan, headersChan)
+
+L:
+	for {
+		select {
+		case h, ok := <-headersChan:
+			if ok {
+				c.printDebug("got headers")
+				headers = h
+			}
+		case newRows, ok := <-resultChan:
+			if !ok {
+				break L
+			}
+			if dataChan != nil {
+				c.printDebug("got rows", len(newRows))
+				dataChan <- Data{Headers: headers, Rows: newRows}
+			} else {
+				rows = append(rows, newRows...)
+			}
+		}
+	}
+
+	if dataChan != nil {
+		close(dataChan)
+	}
+
+	return rows, headers, nil
 }
 
 // pageOverJob loads results for the given job reference and if the total results has not been hit continues to load recursively
@@ -396,6 +351,7 @@ func (c *Client) pageOverJob(rowCount int, jobRef *bigquery.JobReference, pageTo
 		c.printDebug("sending rows")
 		resultChan <- rows
 		rowCount = rowCount + len(rows)
+		c.printDebug("Total rows: ", rowCount)
 	}
 
 	if qr.TotalRows > uint64(rowCount) || !qr.JobComplete {
