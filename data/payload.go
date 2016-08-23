@@ -1,9 +1,9 @@
 package data
 
 import (
-	"fmt"
+	//"fmt"
 	//"bytes"
-	"github.com/dailyburn/ratchet/logger"
+	//"github.com/dailyburn/ratchet/logger"
 )
 
 // Payload is the data type that is passed along all data channels.
@@ -11,16 +11,16 @@ import (
 // It's up to you what serializer to use
 //type Payload []byte
 
-type Payload interface {
-	ClonePayload() (Payload)
-	MarshalPayload() []byte
-	UnmarshalPayload(v interface{}) (error)
+type PayloadSerializer interface {
+	MarshalPayload(v interface{}) ([]byte, error)
+	UnmarshalPayload(d []byte, o interface{}) (error)
 }
 
-func Marshal(p Payload) []byte {
-	return p.MarshalPayload()
-}
-
+//func Marshal(p Payload) []byte {
+//	return p.MarshalPayload()
+	//return nil
+//}
+/*
 func Unmarshal(p Payload, v interface{}) (error) {
 	err := p.UnmarshalPayload(v)
 	if err != nil {
@@ -33,7 +33,8 @@ func Unmarshal(p Payload, v interface{}) (error) {
 
 func UnmarshalSilent(p Payload, v interface{}) (error) {
 	return p.UnmarshalPayload(v)
-}
+}*/
+/*
 
 func Objects(p Payload)([]map[string]interface{}, error) {
 	var objects []map[string]interface{}
@@ -68,3 +69,4 @@ func Objects(p Payload)([]map[string]interface{}, error) {
 	return objects, nil
 
 }
+*/
