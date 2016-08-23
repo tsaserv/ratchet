@@ -5,10 +5,10 @@ import (
 	"encoding/gob"
 )
 
-type GobSerializer struct {
+type gobSerializer struct {
 }
 
-func (g GobSerializer) MarshalPayload(v interface{}) ([]byte, error) {
+func (g gobSerializer) MarshalPayload(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 
 	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
@@ -18,13 +18,12 @@ func (g GobSerializer) MarshalPayload(v interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (g GobSerializer) UnmarshalPayload(d []byte, v interface{}) (error) {
+func (g gobSerializer) UnmarshalPayload(d []byte, v interface{}) (error) {
 	return gob.NewDecoder(bytes.NewBuffer(d)).Decode(v)
 }
 
-func NewGobSerializer() (*GobSerializer){
-	return &GobSerializer{}
+func NewGobSerializer() (*gobSerializer){
+	return &gobSerializer{}
 }
-
 
 

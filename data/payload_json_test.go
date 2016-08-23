@@ -34,31 +34,25 @@ func TestJsonSerializer_Struct(t *testing.T) {
 	assert.Nil(err)
 	assertStructs(t, &a, &v)
 }
-/*
 
 func TestJsonSerializer_Interface(t *testing.T) {
 	assert := assert.New(t)
 
-	//marshal unknown interface/type
 	a := newA()
 	b := map[string]interface{}{}
 	b["string"] = a.F_string
 	b["time"] = a.F_time
 	d, err := json_payload.MarshalPayload(b)
-	assert.NotNil(err)
-	assert.Nil(d)
-
-	//marshal known interface/type
-	gob.Register(time.Time{})
-	d, err = json_payload.MarshalPayload(b)
 	assert.Nil(err)
 	assert.NotNil(d)
 
-	//unmarshal known interface/type
 	v := map[string]interface{}{}
 	err = json_payload.UnmarshalPayload(d, &v)
 	assert.Nil(err)
 	assert.Equal(v["string"], a.F_string)
-	assert.Equal(v["time"], a.F_time)
+
+	//TODO refactor test for custom types at JSON
+	mt, err := a.F_time.MarshalText()
+	assert.Nil(err)
+	assert.Equal(v["time"], string(mt))
 }
-*/
