@@ -12,17 +12,17 @@ import (
 //type Payload []byte
 
 type Payload interface {
-	Clone() (Payload)
-	marshal() []byte
-	unmarshal(v interface{}) (error)
+	ClonePayload() (Payload)
+	MarshalPayload() []byte
+	UnmarshalPayload(v interface{}) (error)
 }
 
 func Marshal(p Payload) []byte {
-	return p.marshal()
+	return p.MarshalPayload()
 }
 
 func Unmarshal(p Payload, v interface{}) (error) {
-	err := p.unmarshal(v)
+	err := p.UnmarshalPayload(v)
 	if err != nil {
 		logger.Debug(fmt.Sprintf("data: failure to unmarshal payload into %+v - error is \"%v\"", v, err.Error()))
 		logger.Debug(fmt.Sprintf("	Failed Data: %+v", p))
@@ -32,7 +32,7 @@ func Unmarshal(p Payload, v interface{}) (error) {
 }
 
 func UnmarshalSilent(p Payload, v interface{}) (error) {
-	return p.unmarshal(v)
+	return p.UnmarshalPayload(v)
 }
 
 func Objects(p Payload)([]map[string]interface{}, error) {

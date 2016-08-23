@@ -17,17 +17,17 @@ func NewTextPayload(s string)(*Binary) {
 	return &Binary {data: []byte(s)}
 }
 
-func (p *Binary) Clone()(Payload) {
+func (p *Binary) ClonePayload()(Payload) {
 	dc := make([]byte, len(p.data))
 	copy(dc, p.data)
 	return &Binary {data: dc}
 }
 
-func (p *Binary)marshal() []byte {
+func (p *Binary)MarshalPayload() []byte {
 	return p.data
 }
 
-func (p *Binary)unmarshal(v interface{}) (error) {
+func (p *Binary)UnmarshalPayload(v interface{}) (error) {
 	return nil
 }
 
