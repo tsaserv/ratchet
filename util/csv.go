@@ -41,11 +41,11 @@ func CSVProcess(params *CSVParameters, d data.JSON, outputChan chan data.JSON, k
 	rows := [][]string{}
 
 	if params.WriteHeader && !params.HeaderWritten {
-		header_row := []string{}
+		headerRow := []string{}
 		for _, k := range params.Header {
-			header_row = append(header_row, CSVString(k))
+			headerRow = append(headerRow, CSVString(k))
 		}
-		rows = append(rows, header_row)
+		rows = append(rows, headerRow)
 		params.HeaderWritten = true
 	}
 
