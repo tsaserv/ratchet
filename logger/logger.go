@@ -8,6 +8,7 @@ import (
 	"runtime"
 )
 
+// Ordering the importance of log information. See LogLevel below.
 const (
 	LevelDebug = iota
 	LevelInfo

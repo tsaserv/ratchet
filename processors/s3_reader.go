@@ -47,7 +47,7 @@ func NewS3PrefixReader(awsID, awsSecret, awsRegion, bucket, prefix string) *S3Re
 	return r
 }
 
-// S3Reader reads an entire directory if a prefix is provided (sending each file in that
+// ProcessData reads an entire directory if a prefix is provided (sending each file in that
 // directory to outputChan), or just sends the single file to outputChan if a complete
 // file path is provided (not a prefix/directory).
 //
