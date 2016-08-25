@@ -63,6 +63,22 @@ func testStruct(t *testing.T, st SerializerType) {
 	assertStructs(t, &a, &v)
 }
 
+func testClone(t *testing.T, st SerializerType) {
+	assert := assert.New(t)
+
+	//test simple struct
+	a := newA()
+	p, err := NewPayload(a, st)
+	assert.Nil(err)
+	assert.NotNil(p)
+
+	v := A{}
+	pc := Clone(p)
+	err = Unmarshal(pc, &v)
+	assert.Nil(err)
+	assertStructs(t, &a, &v)
+}
+
 func benchNewPayload(b *testing.B, st SerializerType) {
 	a := newA()
 

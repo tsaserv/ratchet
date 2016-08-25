@@ -13,6 +13,7 @@ import (
 func TestMsgpack_Common(t *testing.T) {
 	testSimple(t, MSGPACK)
 	testStruct(t, MSGPACK)
+	testClone(t, MSGPACK)
 }
 
 func TestMsgpack_Interface(t *testing.T) {
@@ -22,7 +23,7 @@ func TestMsgpack_Interface(t *testing.T) {
 	b := map[string]interface{}{}
 	b["string"] = a.F_string
 	b["time"] = a.F_time
-	p, err := NewPayload(b, MSGPACK)
+	p, err := MSGPACK.NewPayload(b)
 	assert.Nil(err)
 	assert.NotNil(p)
 

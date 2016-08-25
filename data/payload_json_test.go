@@ -8,6 +8,7 @@ import (
 func TestJson_Common(t *testing.T) {
 	testSimple(t, JSON)
 	testStruct(t, JSON)
+	testClone(t, JSON)
 }
 
 func TestJson_Interface(t *testing.T) {
@@ -17,7 +18,7 @@ func TestJson_Interface(t *testing.T) {
 	b := map[string]interface{}{}
 	b["string"] = a.F_string
 	b["time"] = a.F_time
-	p, err := NewPayload(b, JSON)
+	p, err := JSON.NewPayload(b)
 	assert.Nil(err)
 	assert.NotNil(p)
 

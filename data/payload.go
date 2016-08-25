@@ -30,6 +30,10 @@ var (
 	serializerFactoryList   = make(map[SerializerType]serializerFactory)
 )
 
+func (t SerializerType)NewPayload(v interface{})(*Payload, error) {
+	return NewPayload(v, t)
+}
+
 func NextType() (SerializerType) {
 	serializerFactoryMu.Lock()
 	defer serializerFactoryMu.Unlock()
