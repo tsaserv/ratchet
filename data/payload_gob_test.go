@@ -8,37 +8,12 @@ import (
 	"encoding/gob"
 )
 
-var gob_payload = NewGobSerializer()
-
-func TestGobSerializer_Simple(t *testing.T) {
-	assert := assert.New(t)
-
-	d, err := gob_payload.MarshalPayload("12345")
-	assert.Nil(err)
-	assert.NotNil(d)
-
-	var v string
-	err = gob_payload.UnmarshalPayload(d, &v)
-	assert.Nil(err)
-	assert.Equal(v, "12345")
+func TestGob_Common(t *testing.T) {
+	testSimple(t, GOB)
+	testStruct(t, GOB)
 }
 
-func TestGobSerializer_Struct(t *testing.T) {
-	assert := assert.New(t)
-
-	//test simple struct
-	a := newA()
-	d, err := gob_payload.MarshalPayload(a)
-	assert.Nil(err)
-	assert.NotNil(d)
-
-	v := A{}
-	err = gob_payload.UnmarshalPayload(d, &v)
-	assert.Nil(err)
-	assertStructs(t, &a, &v)
-}
-
-func TestGobSerializer_Interface(t *testing.T) {
+func TestGob_Interface(t *testing.T) {
 	assert := assert.New(t)
 
 	//marshal unknown interface/type
@@ -46,20 +21,32 @@ func TestGobSerializer_Interface(t *testing.T) {
 	b := map[string]interface{}{}
 	b["string"] = a.F_string
 	b["time"] = a.F_time
-	d, err := gob_payload.MarshalPayload(b)
+	p, err := NewPayload(b, GOB)
 	assert.NotNil(err)
-	assert.Nil(d)
+	assert.Nil(p)
 
 	//marshal known interface/type
 	gob.Register(time.Time{})
-	d, err = gob_payload.MarshalPayload(b)
+	p, err = NewPayload(b, GOB)
 	assert.Nil(err)
-	assert.NotNil(d)
+	assert.NotNil(p)
 
 	//unmarshal known interface/type
 	v := map[string]interface{}{}
-	err = gob_payload.UnmarshalPayload(d, &v)
+	err = Unmarshal(p, &v)
 	assert.Nil(err)
 	assert.Equal(v["string"], a.F_string)
 	assert.Equal(v["time"], a.F_time)
+}
+
+func BenchmarkGob_New(b *testing.B) {
+	benchNewPayload(b, GOB)
+}
+
+func BenchmarkGob_Clone(b *testing.B) {
+	benchClone(b, GOB)
+}
+
+func BenchmarkGob_Unmarshal(b *testing.B) {
+	benchUnmarshal(b, GOB)
 }

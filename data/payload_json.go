@@ -4,17 +4,27 @@ import (
 	"encoding/json"
 )
 
+var JSON SerializerType
+
 type jsonSerializer struct {
 }
 
-func (j jsonSerializer) MarshalPayload(v interface{}) ([]byte, error) {
+func (j jsonSerializer) Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (j jsonSerializer) UnmarshalPayload(d []byte, v interface{}) (error) {
+func (j jsonSerializer) Unmarshal(d []byte, v interface{}) (error) {
 	return json.Unmarshal(d, v)
 }
 
-func NewJsonSerializer() (*jsonSerializer){
-	return &jsonSerializer{}
+func (j jsonSerializer) Type() (SerializerType) {
+	return JSON
+}
+
+func init() {
+	JSON = NextType()
+
+	RegisterType(JSON, func()(Serializer) {
+		return &jsonSerializer{}
+	})
 }

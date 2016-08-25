@@ -30,7 +30,61 @@ func assertStructs(t *testing.T, a, b *A) {
 
 	assert.Equal(a.F_string, b.F_string)
 	assert.Equal(a.F_time, b.F_time)
+	assert.Equal(a.F_int, b.F_int)
 	assert.Equal(a.F_bool, b.F_bool)
 	assert.Equal(a.F_float, b.F_float)
-	assert.Equal(a.F_float, b.F_float)
+}
+
+func testSimple(t *testing.T, st SerializerType) {
+	assert := assert.New(t)
+
+	p, err := NewPayload("12345", st)
+	assert.Nil(err)
+	assert.NotNil(p)
+
+	var v string
+	err = Unmarshal(p, &v)
+	assert.Nil(err)
+	assert.Equal(v, "12345")
+}
+
+func testStruct(t *testing.T, st SerializerType) {
+	assert := assert.New(t)
+
+	//test simple struct
+	a := newA()
+	p, err := NewPayload(a, st)
+	assert.Nil(err)
+	assert.NotNil(p)
+
+	v := A{}
+	err = Unmarshal(p, &v)
+	assert.Nil(err)
+	assertStructs(t, &a, &v)
+}
+
+func benchNewPayload(b *testing.B, st SerializerType) {
+	a := newA()
+
+	for i := 0; i < b.N; i++ {
+		NewPayload(a, st)
+	}
+}
+
+func benchClone(b *testing.B, st SerializerType) {
+	a := newA()
+	p,_ := NewPayload(a, st)
+
+	for i := 0; i < b.N; i++ {
+		Clone(p)
+	}
+}
+
+func benchUnmarshal(b *testing.B, st SerializerType) {
+	a := newA()
+	p,_ := NewPayload(a, st)
+
+	for i := 0; i < b.N; i++ {
+		UnmarshalSilent(p, &A{})
+	}
 }
