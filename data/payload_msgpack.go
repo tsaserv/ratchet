@@ -1,8 +1,3 @@
-/**
- * Created by Andrey Gayvoronsky on 25/08/16.
- * (C) Luxms-BI
- */
-
 package data
 
 
