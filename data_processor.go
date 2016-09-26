@@ -51,9 +51,7 @@ func (dp *dataProcessor) branchOut() {
 			for _, out := range dp.branchOutChans {
 				// Make a copy to ensure concurrent stages
 				// can alter data as needed.
-				//dc := make(data.Payload, len(d))
-				//copy(dc, d)
-				out <- d.Clone()
+				out <- d.ClonePayload()
 			}
 			dp.recordDataSent(d)
 		}

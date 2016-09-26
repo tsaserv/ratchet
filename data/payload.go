@@ -1,28 +1,94 @@
 package data
 
 import (
+	"sync"
 	"fmt"
-	//"bytes"
+	"log"
 	"github.com/dailyburn/ratchet/logger"
 )
 
 // Payload is the data type that is passed along all data channels.
-// Under the covers, Payload is simply a []byte containing binary data.
+// Under the covers, Payload is simply a []byte containing binary data with built-in serializer.
 // It's up to you what serializer to use
-//type Payload []byte
-
-type Payload interface {
-	Clone() (Payload)
-	marshal() []byte
-	unmarshal(v interface{}) (error)
+type Serializer interface {
+	Marshal(v interface{}) ([]byte, error)
+	Unmarshal(d []byte, o interface{}) (error)
+	Type()(SerializerType)
 }
 
-func Marshal(p Payload) []byte {
-	return p.marshal()
+type Payload struct {
+	serializer Serializer
+	data []byte
 }
 
-func Unmarshal(p Payload, v interface{}) (error) {
-	err := p.unmarshal(v)
+type SerializerType int
+
+type serializerFactory func() (Serializer)
+
+var (
+	serializerFactoryMu sync.RWMutex
+	serializerFactoryList   = make(map[SerializerType]serializerFactory)
+)
+
+func (t SerializerType)NewPayload(v interface{})(*Payload, error) {
+	return NewPayload(v, t)
+}
+
+func NextType() (SerializerType) {
+	serializerFactoryMu.Lock()
+	defer serializerFactoryMu.Unlock()
+
+	return SerializerType(len(serializerFactoryList))
+}
+
+func RegisterType(t SerializerType, f serializerFactory) {
+	serializerFactoryMu.Lock()
+	defer serializerFactoryMu.Unlock()
+
+	if f == nil {
+		log.Panicln("Can't register serializer without factory.")
+	}
+
+	_, registered := serializerFactoryList[t]
+	if registered {
+		log.Panicln("Factory was already registered. Ignoring.")
+	}
+
+	serializerFactoryList[t] = f
+}
+
+func NewPayload(v interface{}, t SerializerType) (*Payload, error) {
+	serializerFactoryMu.RLock()
+	defer serializerFactoryMu.RUnlock()
+
+	f,_ := serializerFactoryList[t]
+	s := f()
+
+	d, err := s.Marshal(v)
+	if err != nil {
+		logger.Debug(fmt.Sprintf("data: failure to marshal payload %+v - error is \"%v\"", v, err.Error()))
+		logger.Debug(fmt.Sprintf("	Failed val: %+v", v))
+		return nil, err
+	}
+
+	return &Payload{serializer: s, data: d}, err
+}
+
+func Clone(p *Payload) (*Payload) {
+	serializerFactoryMu.RLock()
+	defer serializerFactoryMu.RUnlock()
+
+	dc := make([]byte, len(p.data))
+	copy(dc, p.data)
+
+	f,_ := serializerFactoryList[p.serializer.Type()]
+	s := f()
+
+	return &Payload{serializer: s, data: dc}
+}
+
+func Unmarshal(p *Payload, v interface{}) (error) {
+	err := p.serializer.Unmarshal(p.data, v)
 	if err != nil {
 		logger.Debug(fmt.Sprintf("data: failure to unmarshal payload into %+v - error is \"%v\"", v, err.Error()))
 		logger.Debug(fmt.Sprintf("	Failed Data: %+v", p))
@@ -31,10 +97,11 @@ func Unmarshal(p Payload, v interface{}) (error) {
 	return err
 }
 
-func UnmarshalSilent(p Payload, v interface{}) (error) {
-	return p.unmarshal(v)
+func UnmarshalSilent(p *Payload, v interface{}) (error) {
+	return p.serializer.Unmarshal(p.data, v)
 }
 
+/*
 func Objects(p Payload)([]map[string]interface{}, error) {
 	var objects []map[string]interface{}
 
@@ -68,3 +135,4 @@ func Objects(p Payload)([]map[string]interface{}, error) {
 	return objects, nil
 
 }
+*/
