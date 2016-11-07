@@ -19,14 +19,14 @@ type redshiftManifestEntry struct {
 	Mandatory bool   `json:"mandatory"`
 }
 
-// RedshiftProcessor gets data into a Redshift table by first uploading data batches to S3.
+// RedshiftWriter gets data into a Redshift table by first uploading data batches to S3.
 // Once all data is uploaded to S3, the appropriate "COPY" command is executed against the
 // database to import the data files.
 //
 // This processor is not set up to do any fancy merging; rather, it writes every row received
 // to the table defined. An ideal use case is writing data to a temporary table that is later
 // merged into your production dataset.
-type RedshiftProcessor struct {
+type RedshiftWriter struct {
 	awsID           string
 	awsSecret       string
 	awsRegion       string
@@ -43,8 +43,8 @@ type RedshiftProcessor struct {
 }
 
 // NewRedshiftProcessor returns a reference to a new Redshift Processor
-func NewRedshiftProcessor(db *sql.DB, tableName, awsID, awsSecret, awsRegion, bucket, prefix string) *RedshiftProcessor {
-	p := RedshiftProcessor{
+func NewRedshiftWriter(db *sql.DB, tableName, awsID, awsSecret, awsRegion, bucket, prefix string) *RedshiftWriter {
+	p := RedshiftWriter{
 		awsID:     awsID,
 		awsSecret: awsSecret,
 		awsRegion: awsRegion,
@@ -64,7 +64,7 @@ func NewRedshiftProcessor(db *sql.DB, tableName, awsID, awsSecret, awsRegion, bu
 
 // ProcessData stores incoming data in a local var. Once enough data has been received (as defined
 // by r.BatchSize), it will write a file out to S3 and reset the local var
-func (r *RedshiftProcessor) ProcessData(d data.JSON, outputChan chan data.JSON, killChan chan error) {
+func (r *RedshiftWriter) ProcessData(d data.JSON, outputChan chan data.JSON, killChan chan error) {
 	var objects []interface{}
 	err := data.ParseJSON(d, &objects)
 	util.KillPipelineIfErr(err, killChan)
@@ -83,13 +83,13 @@ func (r *RedshiftProcessor) ProcessData(d data.JSON, outputChan chan data.JSON, 
 
 // Finish writes any remaining records to a file on S3, creates the manifest file, and then
 // kicks off the query to import the S3 files into the Redshift table
-func (r *RedshiftProcessor) Finish(outputChan chan data.JSON, killChan chan error) {
+func (r *RedshiftWriter) Finish(outputChan chan data.JSON, killChan chan error) {
 	r.flushFiles(killChan)
 	r.createManifest(killChan)
 	r.copyToRedshift(killChan)
 }
 
-func (r *RedshiftProcessor) flushFiles(killChan chan error) {
+func (r *RedshiftWriter) flushFiles(killChan chan error) {
 	fileName := fmt.Sprintf("%vfile.%v", r.prefix, len(r.manifestEntries))
 	_, err := util.WriteS3Object(r.data, r.config, r.bucket, fileName, "\n", r.Compress)
 	util.KillPipelineIfErr(err, killChan)
@@ -107,7 +107,7 @@ func (r *RedshiftProcessor) flushFiles(killChan chan error) {
 	r.data = nil
 }
 
-func (r *RedshiftProcessor) createManifest(killChan chan error) {
+func (r *RedshiftWriter) createManifest(killChan chan error) {
 	manifest := redshiftManifest{Entries: r.manifestEntries}
 	manifestData, err := data.NewJSON(manifest)
 	util.KillPipelineIfErr(err, killChan)
@@ -118,12 +118,12 @@ func (r *RedshiftProcessor) createManifest(killChan chan error) {
 	util.KillPipelineIfErr(err, killChan)
 }
 
-func (r *RedshiftProcessor) copyToRedshift(killChan chan error) {
+func (r *RedshiftWriter) copyToRedshift(killChan chan error) {
 	err := util.ExecuteSQLQuery(r.db, r.copyQuery())
 	util.KillPipelineIfErr(err, killChan)
 }
 
-func (r *RedshiftProcessor) copyQuery() string {
+func (r *RedshiftWriter) copyQuery() string {
 	compression := ""
 	if r.Compress {
 		compression = "GZIP"
@@ -142,6 +142,6 @@ func (r *RedshiftProcessor) copyQuery() string {
 	return query
 }
 
-func (r *RedshiftProcessor) String() string {
-	return "RedshiftProcessor"
+func (r *RedshiftWriter) String() string {
+	return "RedshiftWriter"
 }
