@@ -40,20 +40,26 @@ type RedshiftWriter struct {
 	BatchSize       int
 	Compress        bool
 	manifestPath    string
+
+	// If the file name should be a fixed width, specify that here.
+	// Files uploaded to S3 will be zero-padded to this width.
+	// Defaults to 10.
+	FileNameWidth int
 }
 
 // NewRedshiftProcessor returns a reference to a new Redshift Processor
 func NewRedshiftWriter(db *sql.DB, tableName, awsID, awsSecret, awsRegion, bucket, prefix string) *RedshiftWriter {
 	p := RedshiftWriter{
-		awsID:     awsID,
-		awsSecret: awsSecret,
-		awsRegion: awsRegion,
-		bucket:    bucket,
-		db:        db,
-		prefix:    prefix,
-		tableName: tableName,
-		BatchSize: 1000,
-		Compress:  true,
+		awsID:         awsID,
+		awsSecret:     awsSecret,
+		awsRegion:     awsRegion,
+		bucket:        bucket,
+		db:            db,
+		prefix:        prefix,
+		tableName:     tableName,
+		BatchSize:     1000,
+		Compress:      true,
+		FileNameWidth: 10,
 	}
 
 	creds := credentials.NewStaticCredentials(awsID, awsSecret, "")
@@ -65,8 +71,7 @@ func NewRedshiftWriter(db *sql.DB, tableName, awsID, awsSecret, awsRegion, bucke
 // ProcessData stores incoming data in a local var. Once enough data has been received (as defined
 // by r.BatchSize), it will write a file out to S3 and reset the local var
 func (r *RedshiftWriter) ProcessData(d data.JSON, outputChan chan data.JSON, killChan chan error) {
-	var objects []interface{}
-	err := data.ParseJSON(d, &objects)
+	objects, err := data.ObjectsFromJSON(d)
 	util.KillPipelineIfErr(err, killChan)
 
 	for _, obj := range objects {
@@ -90,7 +95,9 @@ func (r *RedshiftWriter) Finish(outputChan chan data.JSON, killChan chan error) 
 }
 
 func (r *RedshiftWriter) flushFiles(killChan chan error) {
-	fileName := fmt.Sprintf("%vfile.%v", r.prefix, len(r.manifestEntries))
+	formatString := fmt.Sprintf("%%0%vv", r.FileNameWidth)
+	fileSuffix := fmt.Sprintf(formatString, len(r.manifestEntries))
+	fileName := fmt.Sprintf("%vfile.%v", r.prefix, fileSuffix)
 	_, err := util.WriteS3Object(r.data, r.config, r.bucket, fileName, "\n", r.Compress)
 	util.KillPipelineIfErr(err, killChan)
 
