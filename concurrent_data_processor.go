@@ -46,14 +46,16 @@ type result struct {
 	open       bool
 }
 
-func (dp *dataProcessor) processData(d data.JSON, killChan chan error) {
+func (dp *dataProcessor) processData(d data.JSON, killChan chan error) chan bool {
 	logger.Debug("dataProcessor: processData", dp, "with concurrency =", dp.concurrency)
+	exit := make(chan bool, 1)
 	// If no concurrency is needed, simply call stage.ProcessData and return...
 	if dp.concurrency <= 1 {
 		dp.recordExecution(func() {
 			dp.ProcessData(d, dp.outputChan, killChan)
+			exit <- true
 		})
-		return
+		return exit
 	}
 	// ... otherwise process the data in a concurrent queue/pool of goroutines
 	logger.Debug("dataProcessor: processData", dp, "waiting for work")
@@ -62,7 +64,6 @@ func (dp *dataProcessor) processData(d data.JSON, killChan chan error) {
 	logger.Debug("dataProcessor: processData", dp, "work obtained")
 	rc := make(chan data.JSON)
 	done := make(chan bool)
-	exit := make(chan bool)
 	// setup goroutine to handle result
 	go func() {
 		res := result{outputChan: dp.outputChan, data: []data.JSON{}, open: true}
@@ -95,7 +96,7 @@ func (dp *dataProcessor) processData(d data.JSON, killChan chan error) {
 	})
 
 	// wait on processing to complete
-	<-exit
+	return exit
 }
 
 // sendResults handles sending work that is completed, as well as
