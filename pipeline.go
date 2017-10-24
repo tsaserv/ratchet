@@ -26,6 +26,12 @@ type Pipeline struct {
 	wg           sync.WaitGroup
 }
 
+// PipelineIface provides an interface to enable mocking the Pipeline.
+// This makes unit testing your code that uses pipelines easier.
+type PipelineIface interface {
+	Run() chan error
+}
+
 // NewPipeline creates a new pipeline ready to run the given DataProcessors.
 // For more complex use-cases, see NewBranchingPipeline.
 func NewPipeline(processors ...DataProcessor) *Pipeline {
