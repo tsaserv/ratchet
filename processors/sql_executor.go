@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/dailyburn/ratchet/data"
-	"github.com/dailyburn/ratchet/logger"
-	"github.com/dailyburn/ratchet/util"
+	"github.com/tsaserv/ratchet/data"
+	"github.com/tsaserv/ratchet/logger"
+	"github.com/tsaserv/ratchet/util"
 )
 
 // SQLExecutor runs the given SQL and swallows any returned data.
